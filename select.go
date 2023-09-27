@@ -1,36 +1,81 @@
 package qb
 
-import "database/sql"
+import (
+	"database/sql"
+	"strings"
+)
 
-type selectQuery struct {
-}
-
-func Select(table string) selectQuery {
-	return selectQuery{}
-}
-
-func (s selectQuery) Join(table, on string) selectQuery {
-	return s
-}
-func (s selectQuery) Column(column string) selectQuery {
-	return s
-}
-func (s selectQuery) Where(where string) selectQuery {
-	return s
-}
-func (s selectQuery) OrderBy(orderBy string) selectQuery {
-	return s
-}
-func (s selectQuery) Limit(limit string) selectQuery {
-	return s
+type QSelect struct {
+	col     strings.Builder
+	join    strings.Builder
+	where   string
+	limit   string
+	orderBy string
+	args    []any
 }
 
-func (s selectQuery) Sql() string {
-	return ""
+func Select(table string) QSelect {
+	return QSelect{}
 }
 
-func (s selectQuery) Run(db *sql.DB, onRow func(*sql.Rows) error) error {
-	rows, err := db.Query(s.Sql())
+func (s QSelect) Join(table, on string) QSelect {
+	s.join.WriteString(table)
+	s.join.WriteString(" on ")
+	s.join.WriteString(on)
+	s.join.WriteString(" \n")
+	return s
+}
+func (s QSelect) Cols(cols ...string) QSelect {
+	for i, col := range cols {
+		if i != 0 {
+			s.col.WriteString(", ")
+		}
+		s.col.WriteString(col)
+	}
+	return s
+}
+func (s QSelect) Where(where string) QSelect {
+	s.where = where
+	return s
+}
+func (s QSelect) OrderBy(orderBy string) QSelect {
+	s.orderBy = orderBy
+	return s
+}
+func (s QSelect) Limit(limit string) QSelect {
+	s.limit = limit
+	return s
+}
+func (s QSelect) Args(args ...any) QSelect {
+	s.args = args
+	return s
+}
+func (s QSelect) Sql() string {
+	var query strings.Builder
+	query.WriteString("select ")
+	query.WriteString(s.col.String())
+	query.WriteString(" \n")
+	query.WriteString(s.join.String())
+	query.WriteString(s.where)
+	query.WriteString(s.orderBy)
+	query.WriteString(s.limit)
+	return query.String()
+}
+
+func (s QSelect) Build() BQSelect {
+	return BQSelect{
+		sql:  s.Sql(),
+		args: s.args,
+	}
+}
+
+type BQSelect struct {
+	sql  string
+	args []any
+}
+
+func (s BQSelect) Query(db *sql.DB, onRow func(*sql.Rows) error) error {
+	rows, err := db.Query(s.sql, s.args...)
 	if err != nil {
 		return err
 	}
@@ -41,4 +86,35 @@ func (s selectQuery) Run(db *sql.DB, onRow func(*sql.Rows) error) error {
 		}
 	}
 	return nil
+}
+
+func (s BQSelect) QueryRow(db *sql.DB, onRow func(*sql.Row) error) error {
+	row := db.QueryRow(s.sql, s.args...)
+	if row.Err() != nil {
+		return row.Err()
+	}
+	return onRow(row)
+}
+
+func tst() []int {
+	var ints []int
+	Select("animes a").
+		Cols("a.id", "a.title", "ai.aired").
+		Join("anime_infos ai", "ai.anime_id=a.id").
+		Where("a.title like ? and a.aired > ?").
+		OrderBy("ai.aired desc").
+		Limit("10").
+		Args("%Cowboy%", "2023-14-11").
+		Build().
+		Query(nil, func(r *sql.Rows) error {
+			var i int
+			err := r.Scan(&i)
+			if err != nil {
+				return err
+			}
+			ints = append(ints, i)
+			return nil
+		})
+	return ints
+
 }
