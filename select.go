@@ -6,6 +6,7 @@ import (
 )
 
 type QSelect struct {
+	table   string
 	col     strings.Builder
 	join    strings.Builder
 	where   string
@@ -54,6 +55,8 @@ func (s QSelect) Sql() string {
 	var query strings.Builder
 	query.WriteString("select ")
 	query.WriteString(s.col.String())
+	query.WriteString("from ")
+	query.WriteString(s.table)
 	query.WriteString(" \n")
 	query.WriteString(s.join.String())
 	query.WriteString(s.where)
