@@ -16,10 +16,11 @@ type QSelect struct {
 }
 
 func Select(table string) QSelect {
-	return QSelect{}
+	return QSelect{table: table}
 }
 
 func (s QSelect) Join(table, on string) QSelect {
+	s.join.WriteString("join ")
 	s.join.WriteString(table)
 	s.join.WriteString(" on ")
 	s.join.WriteString(on)
@@ -55,13 +56,17 @@ func (s QSelect) Sql() string {
 	var query strings.Builder
 	query.WriteString("select ")
 	query.WriteString(s.col.String())
-	query.WriteString("from ")
+	query.WriteString(" from ")
 	query.WriteString(s.table)
 	query.WriteString(" \n")
 	query.WriteString(s.join.String())
+	query.WriteString("where ")
 	query.WriteString(s.where)
+	query.WriteString(" \norder by ")
 	query.WriteString(s.orderBy)
+	query.WriteString(" \nlimit ")
 	query.WriteString(s.limit)
+	query.WriteString(" \n")
 	return query.String()
 }
 
