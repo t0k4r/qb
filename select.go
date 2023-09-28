@@ -12,11 +12,28 @@ type QSelect struct {
 	where   string
 	limit   string
 	orderBy string
-	args    []any
 }
 
-func Select(table string) QSelect {
-	return QSelect{table: table}
+func Select(from string) QSelect {
+	return QSelect{table: from}
+}
+
+func (s QSelect) LJoin(table, on string) QSelect {
+	s.join.WriteString("left join ")
+	s.join.WriteString(table)
+	s.join.WriteString(" on ")
+	s.join.WriteString(on)
+	s.join.WriteString(" \n")
+	return s
+}
+
+func (s QSelect) RJoin(table, on string) QSelect {
+	s.join.WriteString("right join ")
+	s.join.WriteString(table)
+	s.join.WriteString(" on ")
+	s.join.WriteString(on)
+	s.join.WriteString(" \n")
+	return s
 }
 
 func (s QSelect) Join(table, on string) QSelect {
@@ -48,10 +65,6 @@ func (s QSelect) Limit(limit string) QSelect {
 	s.limit = limit
 	return s
 }
-func (s QSelect) Args(args ...any) QSelect {
-	s.args = args
-	return s
-}
 func (s QSelect) Sql() string {
 	var query strings.Builder
 	query.WriteString("select ")
@@ -60,30 +73,34 @@ func (s QSelect) Sql() string {
 	query.WriteString(s.table)
 	query.WriteString(" \n")
 	query.WriteString(s.join.String())
-	query.WriteString("where ")
-	query.WriteString(s.where)
-	query.WriteString(" \norder by ")
-	query.WriteString(s.orderBy)
-	query.WriteString(" \nlimit ")
-	query.WriteString(s.limit)
+	if s.where != "" {
+		query.WriteString("where ")
+		query.WriteString(s.where)
+	}
+	if s.orderBy != "" {
+		query.WriteString(" \norder by ")
+		query.WriteString(s.orderBy)
+	}
+	if s.limit != "" {
+		query.WriteString(" \nlimit ")
+		query.WriteString(s.limit)
+	}
 	query.WriteString(" \n")
 	return query.String()
 }
 
 func (s QSelect) Build() BQSelect {
 	return BQSelect{
-		sql:  s.Sql(),
-		args: s.args,
+		sql: s.Sql(),
 	}
 }
 
 type BQSelect struct {
-	sql  string
-	args []any
+	sql string
 }
 
-func (s BQSelect) Query(db *sql.DB, onRow func(*sql.Rows) error) error {
-	rows, err := db.Query(s.sql, s.args...)
+func (s BQSelect) Query(db *sql.DB, onRow func(*sql.Rows) error, args ...any) error {
+	rows, err := db.Query(s.sql, args)
 	if err != nil {
 		return err
 	}
@@ -96,33 +113,10 @@ func (s BQSelect) Query(db *sql.DB, onRow func(*sql.Rows) error) error {
 	return nil
 }
 
-func (s BQSelect) QueryRow(db *sql.DB, onRow func(*sql.Row) error) error {
-	row := db.QueryRow(s.sql, s.args...)
+func (s BQSelect) QueryRow(db *sql.DB, onRow func(*sql.Row) error, args ...any) error {
+	row := db.QueryRow(s.sql, args)
 	if row.Err() != nil {
 		return row.Err()
 	}
 	return onRow(row)
-}
-
-func tst() []int {
-	var ints []int
-	Select("animes a").
-		Cols("a.id", "a.title", "ai.aired").
-		Join("anime_infos ai", "ai.anime_id=a.id").
-		Where("a.title like ? and a.aired > ?").
-		OrderBy("ai.aired desc").
-		Limit("10").
-		Args("%Cowboy%", "2023-14-11").
-		Build().
-		Query(nil, func(r *sql.Rows) error {
-			var i int
-			err := r.Scan(&i)
-			if err != nil {
-				return err
-			}
-			ints = append(ints, i)
-			return nil
-		})
-	return ints
-
 }
