@@ -179,7 +179,7 @@ type BQSelect struct {
 }
 
 func (s BQSelect) Query(db *sql.DB, onRow func(*sql.Rows) error, args ...any) error {
-	rows, err := db.Query(s.sql, args)
+	rows, err := db.Query(s.sql, args...)
 	if err != nil {
 		return err
 	}
@@ -193,7 +193,7 @@ func (s BQSelect) Query(db *sql.DB, onRow func(*sql.Rows) error, args ...any) er
 }
 
 func (s BQSelect) QueryRow(db *sql.DB, onRow func(*sql.Row) error, args ...any) error {
-	row := db.QueryRow(s.sql, args)
+	row := db.QueryRow(s.sql, args...)
 	if row.Err() != nil {
 		return row.Err()
 	}
