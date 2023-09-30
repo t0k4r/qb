@@ -1,8 +1,9 @@
 package qb_test
 
 import (
-	"qb"
 	"testing"
+
+	"github.com/t0k4r/qb"
 )
 
 func TestSelect(t *testing.T) {
