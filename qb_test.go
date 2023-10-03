@@ -26,7 +26,7 @@ func TestInsert(t *testing.T) {
 				Cols("ai.aired_id").
 				Where("ai.genre_id = $2")).
 		Col("xd", "").
-		Sql()
+		Sql(qb.Replace)
 	t.Log(q)
 
 }

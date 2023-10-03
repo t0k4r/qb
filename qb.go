@@ -7,17 +7,39 @@ import (
 
 type Arg string
 
+type Conflict string
+
+const (
+	Ignore  Conflict = "ignore"
+	Replace Conflict = "replace"
+)
+
+type Dialect string
+
+const (
+	Postgres Dialect = "postgres"
+	Sqlite   Dialect = "sqlite"
+)
+
+var DefaultDialect = Postgres
+
 type QInsert struct {
-	table string
-	cols  strings.Builder
-	vals  strings.Builder
+	table   string
+	cols    strings.Builder
+	vals    strings.Builder
+	Dialect Dialect
 }
 
 func Insert(into string) QInsert {
-	return QInsert{table: into}
+	return QInsert{
+		table:   into,
+		cols:    strings.Builder{},
+		vals:    strings.Builder{},
+		Dialect: DefaultDialect,
+	}
 }
 
-func (i *QInsert) comma() {
+func (i *QInsert) insComma() {
 	if i.cols.Len() != 0 {
 		i.cols.WriteString(", ")
 		i.vals.WriteString(", ")
@@ -27,24 +49,24 @@ func (i *QInsert) comma() {
 func (i QInsert) Col(col string, value any) QInsert {
 	switch value := value.(type) {
 	case int, uint, float32, float64:
-		i.comma()
+		i.insComma()
 		i.cols.WriteString(col)
 		i.vals.WriteString(fmt.Sprint(value))
 	case string:
 		if value != "" {
-			i.comma()
+			i.insComma()
 			i.cols.WriteString(col)
 			i.vals.WriteString("'")
 			i.vals.WriteString(strings.ReplaceAll(value, "'", "''"))
 			i.vals.WriteString("'")
 		}
 	case Arg:
-		i.comma()
+		i.insComma()
 		i.cols.WriteString(col)
 		i.vals.WriteString(string(value))
 
 	case QSelect:
-		i.comma()
+		i.insComma()
 		i.cols.WriteString(col)
 		i.vals.WriteString("(\n")
 		i.vals.WriteString(value.Sql())
@@ -55,7 +77,7 @@ func (i QInsert) Col(col string, value any) QInsert {
 	return i
 }
 
-func (i QInsert) Sql() string {
+func (i QInsert) Sql(mod ...Conflict) string {
 	var query strings.Builder
 	query.WriteString("insert into ")
 	query.WriteString(i.table)
@@ -64,7 +86,40 @@ func (i QInsert) Sql() string {
 	query.WriteString(")\nvalues ")
 	query.WriteString("(")
 	query.WriteString(i.vals.String())
-	query.WriteString(") on conflict do nothing\n")
+	if len(mod) != 0 {
+		mod := mod[0]
+		switch i.Dialect {
+		case Postgres:
+			switch mod {
+			case Ignore:
+				query.WriteString(") on conflict do nothing \n")
+			case Replace:
+				query.WriteString(") on conflict do update set \n")
+				strip := strings.ReplaceAll(i.cols.String(), " ", "")
+				cols := strings.Split(strip, ",")
+				for i, col := range cols {
+					if i != 0 {
+						query.WriteString(", ")
+					}
+					query.WriteString(fmt.Sprintf("%v=EXCLUDED.%v", col, col))
+					_ = col
+				}
+				query.WriteString(" \n")
+			}
+			return query.String()
+
+		case Sqlite:
+			switch mod {
+			case Ignore:
+				query.WriteString(") on conflict ignore \n")
+			case Replace:
+				query.WriteString(") on conflict replace \n")
+			}
+			return query.String()
+
+		}
+	}
+	query.WriteString(") \n")
 	return query.String()
 }
 
