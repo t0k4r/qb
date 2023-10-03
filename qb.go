@@ -1,7 +1,6 @@
 package qb
 
 import (
-	"database/sql"
 	"fmt"
 	"strings"
 )
@@ -69,28 +68,13 @@ func (i QInsert) Sql() string {
 	return query.String()
 }
 
-func (i QInsert) Build() BQInsert {
-	return BQInsert{
-		sql: i.Sql(),
-	}
-}
-
-type BQInsert struct {
-	sql string
-}
-
-func (i BQInsert) Exec(db *sql.DB, args ...any) error {
-	_, err := db.Exec(i.sql, args...)
-	return err
-}
-
 type QSelect struct {
 	table   string
 	col     strings.Builder
 	join    strings.Builder
-	where   string
-	limit   string
-	orderBy string
+	where   strings.Builder
+	limit   strings.Builder
+	orderBy strings.Builder
 }
 
 func Select(from string) QSelect {
@@ -133,15 +117,15 @@ func (s QSelect) Cols(cols ...string) QSelect {
 	return s
 }
 func (s QSelect) Where(where string) QSelect {
-	s.where = where
+	s.where.WriteString(where)
 	return s
 }
 func (s QSelect) OrderBy(orderBy string) QSelect {
-	s.orderBy = orderBy
+	s.orderBy.WriteString(orderBy)
 	return s
 }
 func (s QSelect) Limit(limit string) QSelect {
-	s.limit = limit
+	s.limit.WriteString(limit)
 	return s
 }
 func (s QSelect) Sql() string {
@@ -152,50 +136,18 @@ func (s QSelect) Sql() string {
 	query.WriteString(s.table)
 	query.WriteString(" \n")
 	query.WriteString(s.join.String())
-	if s.where != "" {
+	if s.where.Len() != 0 {
 		query.WriteString("where ")
-		query.WriteString(s.where)
+		query.WriteString(s.where.String())
 	}
-	if s.orderBy != "" {
+	if s.orderBy.Len() != 0 {
 		query.WriteString(" \norder by ")
-		query.WriteString(s.orderBy)
+		query.WriteString(s.orderBy.String())
 	}
-	if s.limit != "" {
+	if s.limit.Len() != 0 {
 		query.WriteString(" \nlimit ")
-		query.WriteString(s.limit)
+		query.WriteString(s.limit.String())
 	}
 	query.WriteString(" \n")
 	return query.String()
-}
-
-func (s QSelect) Build() BQSelect {
-	return BQSelect{
-		sql: s.Sql(),
-	}
-}
-
-type BQSelect struct {
-	sql string
-}
-
-func (s BQSelect) Query(db *sql.DB, onRow func(*sql.Rows) error, args ...any) error {
-	rows, err := db.Query(s.sql, args...)
-	if err != nil {
-		return err
-	}
-	for rows.Next() {
-		err = onRow(rows)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (s BQSelect) QueryRow(db *sql.DB, onRow func(*sql.Row) error, args ...any) error {
-	row := db.QueryRow(s.sql, args...)
-	if row.Err() != nil {
-		return row.Err()
-	}
-	return onRow(row)
 }
