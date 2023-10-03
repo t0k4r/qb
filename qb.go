@@ -175,6 +175,11 @@ func (s QSelect) Where(where string) QSelect {
 	s.where.WriteString(where)
 	return s
 }
+
+func (s QSelect) Wheref(wherefmt string, args ...any) QSelect {
+	s.where.WriteString(fmt.Sprintf(wherefmt, args...))
+	return s
+}
 func (s QSelect) OrderBy(orderBy string) QSelect {
 	s.orderBy.WriteString(orderBy)
 	return s
