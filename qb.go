@@ -68,7 +68,7 @@ func (i QInsert) Col(col string, value any) QInsert {
 	case QSelect:
 		i.insComma()
 		i.cols.WriteString(col)
-		i.vals.WriteString("(\n")
+		i.vals.WriteString("(")
 		i.vals.WriteString(value.Sql())
 		i.vals.WriteString(")")
 	default:
@@ -77,24 +77,28 @@ func (i QInsert) Col(col string, value any) QInsert {
 	return i
 }
 
-func (i QInsert) Sql(mod ...Conflict) string {
-	var query strings.Builder
-	query.WriteString("insert into ")
+func (i QInsert) middleSql(query *strings.Builder) {
 	query.WriteString(i.table)
 	query.WriteString("(")
 	query.WriteString(i.cols.String())
-	query.WriteString(")\nvalues ")
+	query.WriteString(") values ")
 	query.WriteString("(")
 	query.WriteString(i.vals.String())
+}
+
+func (i QInsert) Sql(mod ...Conflict) string {
+	var query strings.Builder
 	if len(mod) != 0 {
 		mod := mod[0]
 		switch i.Dialect {
 		case Postgres:
+			query.WriteString("insert into ")
+			i.middleSql(&query)
 			switch mod {
 			case Ignore:
-				query.WriteString(") on conflict do nothing \n")
+				query.WriteString(") on conflict do nothing ")
 			case Replace:
-				query.WriteString(") on conflict do update set \n")
+				query.WriteString(") on conflict do update set ")
 				strip := strings.ReplaceAll(i.cols.String(), " ", "")
 				cols := strings.Split(strip, ",")
 				for i, col := range cols {
@@ -104,22 +108,22 @@ func (i QInsert) Sql(mod ...Conflict) string {
 					query.WriteString(fmt.Sprintf("%v=EXCLUDED.%v", col, col))
 					_ = col
 				}
-				query.WriteString(" \n")
 			}
 			return query.String()
 
 		case Sqlite:
 			switch mod {
 			case Ignore:
-				query.WriteString(") on conflict ignore \n")
+				query.WriteString("insert or ignore")
 			case Replace:
-				query.WriteString(") on conflict replace \n")
+				query.WriteString("insert or replace ")
 			}
+			i.middleSql(&query)
+			query.WriteString(")")
 			return query.String()
 
 		}
 	}
-	query.WriteString(") \n")
 	return query.String()
 }
 
@@ -137,29 +141,26 @@ func Select(from string) QSelect {
 }
 
 func (s QSelect) LJoin(table, on string) QSelect {
-	s.join.WriteString("left join ")
+	s.join.WriteString(" left join ")
 	s.join.WriteString(table)
 	s.join.WriteString(" on ")
 	s.join.WriteString(on)
-	s.join.WriteString(" \n")
 	return s
 }
 
 func (s QSelect) RJoin(table, on string) QSelect {
-	s.join.WriteString("right join ")
+	s.join.WriteString(" right join ")
 	s.join.WriteString(table)
 	s.join.WriteString(" on ")
 	s.join.WriteString(on)
-	s.join.WriteString(" \n")
 	return s
 }
 
 func (s QSelect) Join(table, on string) QSelect {
-	s.join.WriteString("join ")
+	s.join.WriteString(" join ")
 	s.join.WriteString(table)
 	s.join.WriteString(" on ")
 	s.join.WriteString(on)
-	s.join.WriteString(" \n")
 	return s
 }
 func (s QSelect) Cols(cols ...string) QSelect {
@@ -194,20 +195,18 @@ func (s QSelect) Sql() string {
 	query.WriteString(s.col.String())
 	query.WriteString(" from ")
 	query.WriteString(s.table)
-	query.WriteString(" \n")
 	query.WriteString(s.join.String())
 	if s.where.Len() != 0 {
-		query.WriteString("where ")
+		query.WriteString(" where ")
 		query.WriteString(s.where.String())
 	}
 	if s.orderBy.Len() != 0 {
-		query.WriteString(" \norder by ")
+		query.WriteString(" order by ")
 		query.WriteString(s.orderBy.String())
 	}
 	if s.limit.Len() != 0 {
-		query.WriteString(" \nlimit ")
+		query.WriteString(" limit ")
 		query.WriteString(s.limit.String())
 	}
-	query.WriteString(" \n")
 	return query.String()
 }

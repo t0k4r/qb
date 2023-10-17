@@ -7,6 +7,7 @@ import (
 )
 
 func TestSelect(t *testing.T) {
+	qb.DefaultDialect = qb.Sqlite
 	q := qb.Select("animes a").
 		Cols("a.id", "a.title", "ai.aired").
 		LJoin("anime_infos ai", "ai.anime_id=a.id").
@@ -18,6 +19,8 @@ func TestSelect(t *testing.T) {
 }
 
 func TestInsert(t *testing.T) {
+	qb.DefaultDialect = qb.Sqlite
+
 	q := qb.Insert("animes").
 		Col("title", "cowboy").
 		Col("aired", qb.Arg("$1")).
