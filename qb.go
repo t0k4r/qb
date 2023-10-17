@@ -123,6 +123,10 @@ func (i QInsert) Sql(mod ...Conflict) string {
 			return query.String()
 
 		}
+	} else {
+		query.WriteString("insert into ")
+		i.middleSql(&query)
+		query.WriteString(")")
 	}
 	return query.String()
 }
