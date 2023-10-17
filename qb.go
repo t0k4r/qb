@@ -182,6 +182,12 @@ func (s QSelect) Where(where string) QSelect {
 }
 
 func (s QSelect) Wheref(wherefmt string, args ...any) QSelect {
+	for i, a := range args {
+		switch a := a.(type) {
+		case string:
+			args[i] = strings.ReplaceAll(a, "'", "''")
+		}
+	}
 	s.where.WriteString(fmt.Sprintf(wherefmt, args...))
 	return s
 }
