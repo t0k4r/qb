@@ -114,7 +114,7 @@ func (i QInsert) Sql(mod ...Conflict) string {
 		case Sqlite:
 			switch mod {
 			case Ignore:
-				query.WriteString("insert or ignore")
+				query.WriteString("insert or ignore ")
 			case Replace:
 				query.WriteString("insert or replace ")
 			}
