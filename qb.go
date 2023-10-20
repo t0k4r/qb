@@ -96,6 +96,7 @@ func (i QInsert) Sql(mod ...Conflict) string {
 			query.WriteString(fmt.Sprintf("%v=EXCLUDED.%v", col, col))
 			_ = col
 		}
+		return query.String()
 	case none:
 		query.WriteString(")")
 		return query.String()
