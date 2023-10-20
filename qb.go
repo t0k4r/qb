@@ -12,30 +12,20 @@ type Conflict string
 const (
 	Ignore  Conflict = "ignore"
 	Replace Conflict = "replace"
+	none    Conflict = "none"
 )
-
-type Dialect string
-
-const (
-	Postgres Dialect = "postgres"
-	Sqlite   Dialect = "sqlite"
-)
-
-var DefaultDialect = Postgres
 
 type QInsert struct {
-	table   string
-	cols    strings.Builder
-	vals    strings.Builder
-	Dialect Dialect
+	table string
+	cols  strings.Builder
+	vals  strings.Builder
 }
 
 func Insert(into string) QInsert {
 	return QInsert{
-		table:   into,
-		cols:    strings.Builder{},
-		vals:    strings.Builder{},
-		Dialect: DefaultDialect,
+		table: into,
+		cols:  strings.Builder{},
+		vals:  strings.Builder{},
 	}
 }
 
@@ -77,58 +67,40 @@ func (i QInsert) Col(col string, value any) QInsert {
 	return i
 }
 
-func (i QInsert) middleSql(query *strings.Builder) {
+func (i QInsert) Sql(mod ...Conflict) string {
+	var query strings.Builder
+	var fmod Conflict
+	if len(mod) != 0 {
+		fmod = mod[0]
+	} else {
+		fmod = none
+	}
+	query.WriteString("insert into ")
 	query.WriteString(i.table)
 	query.WriteString("(")
 	query.WriteString(i.cols.String())
 	query.WriteString(") values ")
 	query.WriteString("(")
 	query.WriteString(i.vals.String())
-}
-
-func (i QInsert) Sql(mod ...Conflict) string {
-	var query strings.Builder
-	if len(mod) != 0 {
-		mod := mod[0]
-		switch i.Dialect {
-		case Postgres:
-			query.WriteString("insert into ")
-			i.middleSql(&query)
-			switch mod {
-			case Ignore:
-				query.WriteString(") on conflict do nothing ")
-			case Replace:
-				query.WriteString(") on conflict do update set ")
-				strip := strings.ReplaceAll(i.cols.String(), " ", "")
-				cols := strings.Split(strip, ",")
-				for i, col := range cols {
-					if i != 0 {
-						query.WriteString(", ")
-					}
-					query.WriteString(fmt.Sprintf("%v=EXCLUDED.%v", col, col))
-					_ = col
-				}
+	switch fmod {
+	case Ignore:
+		query.WriteString(") on conflict do nothing ")
+	case Replace:
+		query.WriteString(") on conflict do update set ")
+		strip := strings.ReplaceAll(i.cols.String(), " ", "")
+		cols := strings.Split(strip, ",")
+		for i, col := range cols {
+			if i != 0 {
+				query.WriteString(", ")
 			}
-			return query.String()
-
-		case Sqlite:
-			switch mod {
-			case Ignore:
-				query.WriteString("insert or ignore into ")
-			case Replace:
-				query.WriteString("insert or replace into ")
-			}
-			i.middleSql(&query)
-			query.WriteString(")")
-			return query.String()
-
+			query.WriteString(fmt.Sprintf("%v=EXCLUDED.%v", col, col))
+			_ = col
 		}
-	} else {
-		query.WriteString("insert into ")
-		i.middleSql(&query)
+	case none:
 		query.WriteString(")")
+		return query.String()
 	}
-	return query.String()
+	return ""
 }
 
 type QSelect struct {
