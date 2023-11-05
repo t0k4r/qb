@@ -20,6 +20,24 @@ func Select[T Selectable]() QSelect[T] {
 	return QSelect[T]{QSelect: t.Cols()}
 }
 
+func (s QSelect[T]) Where(where string) QSelect[T] {
+	s.QSelect = s.QSelect.Where(where)
+	return s
+}
+
+func (s QSelect[T]) Wheref(wherefmt string, args ...any) QSelect[T] {
+	s.QSelect = s.QSelect.Wheref(wherefmt, args...)
+	return s
+}
+func (s QSelect[T]) OrderBy(orderBy string) QSelect[T] {
+	s.QSelect = s.QSelect.OrderBy(orderBy)
+	return s
+}
+func (s QSelect[T]) Limit(limit string) QSelect[T] {
+	s.QSelect = s.QSelect.Limit(limit)
+	return s
+}
+
 func (s QSelect[T]) Query(db *sql.DB, args ...any) ([]T, error) {
 	var items []T
 	rows, err := db.Query(s.Sql(), args...)
