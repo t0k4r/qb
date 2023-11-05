@@ -1,6 +1,7 @@
 package qb
 
 import (
+	"database/sql"
 	"fmt"
 	"strings"
 )
@@ -55,7 +56,7 @@ func (i QInsert) Col(col string, value any) QInsert {
 		i.cols.WriteString(col)
 		i.vals.WriteString(string(value))
 
-	case QSelect:
+	case *QSelect:
 		i.insComma()
 		i.cols.WriteString(col)
 		i.vals.WriteString("(")
@@ -111,11 +112,11 @@ type QSelect struct {
 	orderBy strings.Builder
 }
 
-func Select(from string) QSelect {
-	return QSelect{table: from}
+func Select(from string) *QSelect {
+	return &QSelect{table: from}
 }
 
-func (s QSelect) LJoin(table, on string) QSelect {
+func (s *QSelect) LJoin(table, on string) *QSelect {
 	s.join.WriteString(" left join ")
 	s.join.WriteString(table)
 	s.join.WriteString(" on ")
@@ -123,7 +124,7 @@ func (s QSelect) LJoin(table, on string) QSelect {
 	return s
 }
 
-func (s QSelect) RJoin(table, on string) QSelect {
+func (s *QSelect) RJoin(table, on string) *QSelect {
 	s.join.WriteString(" right join ")
 	s.join.WriteString(table)
 	s.join.WriteString(" on ")
@@ -131,14 +132,14 @@ func (s QSelect) RJoin(table, on string) QSelect {
 	return s
 }
 
-func (s QSelect) Join(table, on string) QSelect {
+func (s *QSelect) Join(table, on string) *QSelect {
 	s.join.WriteString(" join ")
 	s.join.WriteString(table)
 	s.join.WriteString(" on ")
 	s.join.WriteString(on)
 	return s
 }
-func (s QSelect) Cols(cols ...string) QSelect {
+func (s *QSelect) Cols(cols ...string) *QSelect {
 	for i, col := range cols {
 		if i != 0 {
 			s.col.WriteString(", ")
@@ -147,12 +148,12 @@ func (s QSelect) Cols(cols ...string) QSelect {
 	}
 	return s
 }
-func (s QSelect) Where(where string) QSelect {
+func (s *QSelect) Where(where string) *QSelect {
 	s.where.WriteString(where)
 	return s
 }
 
-func (s QSelect) Wheref(wherefmt string, args ...any) QSelect {
+func (s *QSelect) Wheref(wherefmt string, args ...any) *QSelect {
 	for i, a := range args {
 		switch a := a.(type) {
 		case string:
@@ -162,15 +163,15 @@ func (s QSelect) Wheref(wherefmt string, args ...any) QSelect {
 	s.where.WriteString(fmt.Sprintf(wherefmt, args...))
 	return s
 }
-func (s QSelect) OrderBy(orderBy string) QSelect {
+func (s *QSelect) OrderBy(orderBy string) *QSelect {
 	s.orderBy.WriteString(orderBy)
 	return s
 }
-func (s QSelect) Limit(limit string) QSelect {
+func (s *QSelect) Limit(limit string) *QSelect {
 	s.limit.WriteString(limit)
 	return s
 }
-func (s QSelect) Sql() string {
+func (s *QSelect) Sql() string {
 	var query strings.Builder
 	query.WriteString("select ")
 	query.WriteString(s.col.String())
@@ -190,4 +191,25 @@ func (s QSelect) Sql() string {
 		query.WriteString(s.limit.String())
 	}
 	return query.String()
+}
+
+type Selectable interface {
+	Scan(*sql.Rows) (Selectable, error)
+}
+
+func Query[T Selectable](query *QSelect, db *sql.DB, args ...any) ([]T, error) {
+	var items []T
+	rows, err := db.Query(query.Sql(), args...)
+	if err != nil {
+		return items, err
+	}
+	var i T
+	for rows.Next() {
+		item, err := i.Scan(rows)
+		if err != nil {
+			return items, err
+		}
+		items = append(items, item.(T))
+	}
+	return items, nil
 }
