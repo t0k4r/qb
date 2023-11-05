@@ -15,8 +15,9 @@ type QSelect[T Selectable] struct {
 	qb.QSelect
 }
 
-func Select[T Selectable](from string) QSelect[T] {
-	return QSelect[T]{QSelect: qb.Select(from)}
+func Select[T Selectable]() QSelect[T] {
+	var t T
+	return QSelect[T]{QSelect: t.Cols()}
 }
 
 func (s QSelect[T]) Query(db *sql.DB, args ...any) ([]T, error) {
