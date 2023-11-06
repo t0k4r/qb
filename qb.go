@@ -22,8 +22,8 @@ type QInsert struct {
 	vals  strings.Builder
 }
 
-func Insert(into string) QInsert {
-	return QInsert{
+func Insert(into string) *QInsert {
+	return &QInsert{
 		table: into,
 		cols:  strings.Builder{},
 		vals:  strings.Builder{},
@@ -37,12 +37,26 @@ func (i *QInsert) insComma() {
 	}
 }
 
-func (i QInsert) Col(col string, value any) QInsert {
+func (i *QInsert) Col(col string, value any) *QInsert {
 	switch value := value.(type) {
+	case *int, *uint, *float32, *float64:
+		if value != nil {
+			i.insComma()
+			i.cols.WriteString(col)
+			i.vals.WriteString(fmt.Sprint(value))
+		}
 	case int, uint, float32, float64:
 		i.insComma()
 		i.cols.WriteString(col)
 		i.vals.WriteString(fmt.Sprint(value))
+	case *string:
+		if value != nil && *value != "" {
+			i.insComma()
+			i.cols.WriteString(col)
+			i.vals.WriteString("'")
+			i.vals.WriteString(strings.ReplaceAll(*value, "'", "''"))
+			i.vals.WriteString("'")
+		}
 	case string:
 		if value != "" {
 			i.insComma()
@@ -68,7 +82,7 @@ func (i QInsert) Col(col string, value any) QInsert {
 	return i
 }
 
-func (i QInsert) Sql(mod ...Conflict) string {
+func (i *QInsert) Sql(mod ...Conflict) string {
 	var query strings.Builder
 	var fmod Conflict
 	if len(mod) != 0 {
@@ -101,6 +115,21 @@ func (i QInsert) Sql(mod ...Conflict) string {
 		query.WriteString(")")
 	}
 	return query.String()
+}
+
+type Insertable interface {
+	Dump() (cols []string, vals []any)
+}
+
+func Exec[T Insertable](item T, into string, db *sql.DB) error {
+	q := Insert(into)
+	cols, vals := item.Dump()
+	for i, col := range cols {
+		val := vals[i]
+		q.Col(col, val)
+	}
+	_, err := db.Exec(q.Sql())
+	return err
 }
 
 type QSelect struct {
