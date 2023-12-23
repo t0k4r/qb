@@ -113,10 +113,10 @@ func (q *QInsert) Add(col string, val any) *QInsert {
 		q.write(col, fmt.Sprint(val))
 	case string:
 		if val != "" {
-			q.write(col, strings.ReplaceAll(val, "'", "''"))
+			q.write(col, fmt.Sprintf("'%v'", strings.ReplaceAll(val, "'", "''")))
 		}
 	case time.Time:
-		q.write(col, fmt.Sprintf("'%v'", val.Format("006-01-0 15:04:05")))
+		q.write(col, fmt.Sprintf("'%v'", val.Format("2006-01-02 15:04:05")))
 	case *int, *int8, *int16, *int32, *int64,
 		*uint, *uint8, *uint16, *uint32, *uint64:
 		if val != nil {
@@ -124,11 +124,11 @@ func (q *QInsert) Add(col string, val any) *QInsert {
 		}
 	case *string:
 		if val != nil && *val != "" {
-			q.write(col, strings.ReplaceAll(*val, "'", "''"))
+			q.write(col, fmt.Sprintf("'%v'", strings.ReplaceAll(*val, "'", "''")))
 		}
 	case *time.Time:
 		if val != nil {
-			q.write(col, fmt.Sprintf("'%v'", val.Format("006-01-0 15:04:05")))
+			q.write(col, fmt.Sprintf("'%v'", val.Format("2006-01-02 15:04:05")))
 		}
 	default:
 		panic("unknown val type")
