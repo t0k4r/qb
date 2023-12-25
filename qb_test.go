@@ -27,6 +27,7 @@ func TestInsert(t *testing.T) {
 	q := qb.Insert("animes").
 		Add("title", "cowboy").
 		Addf("rating", "$1").
+		Addfn("lol", "(select id where yyz = %v)", "not'not").
 		Add("aired", time.Now()).
 		Add("description", nil).
 		OnConflict(qb.DoNothing).

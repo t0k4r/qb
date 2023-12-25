@@ -102,42 +102,63 @@ func (q *QInsert) write(col string, val string) {
 	}
 }
 
-func (q *QInsert) Add(col string, val any) *QInsert {
+func normalize(val any) string {
 	switch val := val.(type) {
 	case nil:
-		q.write(col, "NULL")
+		return "NULL"
 	case []byte:
-		q.write(col, fmt.Sprintf("'%s'", val))
+		return fmt.Sprintf("'%s'", val)
 	case int, int8, int16, int32, int64,
-		uint, uint8, uint16, uint32, uint64:
-		q.write(col, fmt.Sprint(val))
+		uint, uint8, uint16, uint32, uint64,
+		float32, float64:
+		return fmt.Sprint(val)
 	case string:
 		if val != "" {
-			q.write(col, fmt.Sprintf("'%v'", strings.ReplaceAll(val, "'", "''")))
+			return fmt.Sprintf("'%v'", strings.ReplaceAll(val, "'", "''"))
 		}
 	case time.Time:
-		q.write(col, fmt.Sprintf("'%v'", val.Format("2006-01-02 15:04:05")))
+		return fmt.Sprintf("'%v'", val.Format("2006-01-02 15:04:05"))
 	case *int, *int8, *int16, *int32, *int64,
-		*uint, *uint8, *uint16, *uint32, *uint64:
+		*uint, *uint8, *uint16, *uint32, *uint64,
+		*float32, *float64:
 		if val != nil {
-			q.write(col, fmt.Sprint(val))
+			return fmt.Sprint(val)
 		}
 	case *string:
 		if val != nil && *val != "" {
-			q.write(col, fmt.Sprintf("'%v'", strings.ReplaceAll(*val, "'", "''")))
+			return fmt.Sprintf("'%v'", strings.ReplaceAll(*val, "'", "''"))
 		}
 	case *time.Time:
 		if val != nil {
-			q.write(col, fmt.Sprintf("'%v'", val.Format("2006-01-02 15:04:05")))
+			return fmt.Sprintf("'%v'", val.Format("2006-01-02 15:04:05"))
 		}
 	default:
 		panic("unknown val type")
 	}
+	return ""
+}
+
+func (q *QInsert) Add(col string, val any) *QInsert {
+	v := normalize(val)
+	if v != "" {
+		q.write(col, v)
+	}
 	return q
 }
+
+// add fmt
 func (q *QInsert) Addf(col string, format string, a ...any) *QInsert {
 	q.write(col, fmt.Sprintf(format, a...))
 	return q
+}
+
+// add fmt normalize
+func (q *QInsert) Addfn(col string, format string, a ...any) *QInsert {
+	var args []any
+	for _, a := range a {
+		args = append(args, normalize(a))
+	}
+	return q.Addf(col, format, args...)
 }
 
 func (q *QInsert) Sql() string {
