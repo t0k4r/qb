@@ -73,11 +73,10 @@ func (q *QSelect[T]) Addf(format string, a ...any) *QSelect[T] {
 // add normalize fmt
 func (q *QSelect[T]) Addn(format string, a ...any) *QSelect[T] {
 	q.sql.WriteString(" ")
-	var args []any
-	for _, a := range a {
-		args = append(args, normalize(a))
+	for i := range a {
+		a[i] = append(a, normalize(a[i]))
 	}
-	q.Addf(format, args...)
+	q.Addf(format, a...)
 	q.sql.WriteString(" ")
 	return q
 }
@@ -172,11 +171,10 @@ func (q *QInsert) Addf(col string, format string, a ...any) *QInsert {
 
 // add normalize fmt
 func (q *QInsert) Addn(col string, format string, a ...any) *QInsert {
-	var args []any
-	for _, a := range a {
-		args = append(args, normalize(a))
+	for i := range a {
+		a[i] = append(a, normalize(a[i]))
 	}
-	return q.Addf(col, format, args...)
+	return q.Addf(col, format, a...)
 }
 
 // add raw
