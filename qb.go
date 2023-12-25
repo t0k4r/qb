@@ -7,6 +7,42 @@ import (
 	"time"
 )
 
+func normalize(val any) string {
+	switch val := val.(type) {
+	case nil:
+		return "NULL"
+	case []byte:
+		return fmt.Sprintf("'%s'", val)
+	case int, int8, int16, int32, int64,
+		uint, uint8, uint16, uint32, uint64,
+		float32, float64:
+		return fmt.Sprint(val)
+	case string:
+		if val != "" {
+			return fmt.Sprintf("'%v'", strings.ReplaceAll(val, "'", "''"))
+		}
+	case time.Time:
+		return fmt.Sprintf("'%v'", val.Format("2006-01-02 15:04:05"))
+	case *int, *int8, *int16, *int32, *int64,
+		*uint, *uint8, *uint16, *uint32, *uint64,
+		*float32, *float64:
+		if val != nil {
+			return fmt.Sprint(val)
+		}
+	case *string:
+		if val != nil && *val != "" {
+			return fmt.Sprintf("'%v'", strings.ReplaceAll(*val, "'", "''"))
+		}
+	case *time.Time:
+		if val != nil {
+			return fmt.Sprintf("'%v'", val.Format("2006-01-02 15:04:05"))
+		}
+	default:
+		panic("unknown val type")
+	}
+	return ""
+}
+
 type Selectable interface {
 	Scan(*sql.Rows) (Selectable, error)
 }
@@ -20,14 +56,32 @@ func Select[T Selectable]() *QSelect[T] {
 }
 
 func (q *QSelect[T]) Add(str string) *QSelect[T] {
+	q.sql.WriteString(" ")
 	q.sql.WriteString(str)
+	q.sql.WriteString(" ")
 	return q
 }
 
+// add fmt
 func (q *QSelect[T]) Addf(format string, a ...any) *QSelect[T] {
+	q.sql.WriteString(" ")
 	q.sql.WriteString(fmt.Sprintf(format, a...))
+	q.sql.WriteString(" ")
 	return q
 }
+
+// add normalize fmt
+func (q *QSelect[T]) Addn(format string, a ...any) *QSelect[T] {
+	q.sql.WriteString(" ")
+	var args []any
+	for _, a := range a {
+		args = append(args, normalize(a))
+	}
+	q.Addf(format, args...)
+	q.sql.WriteString(" ")
+	return q
+}
+
 func (q *QSelect[T]) Sql() string {
 	return q.sql.String()
 }
@@ -102,42 +156,6 @@ func (q *QInsert) write(col string, val string) {
 	}
 }
 
-func normalize(val any) string {
-	switch val := val.(type) {
-	case nil:
-		return "NULL"
-	case []byte:
-		return fmt.Sprintf("'%s'", val)
-	case int, int8, int16, int32, int64,
-		uint, uint8, uint16, uint32, uint64,
-		float32, float64:
-		return fmt.Sprint(val)
-	case string:
-		if val != "" {
-			return fmt.Sprintf("'%v'", strings.ReplaceAll(val, "'", "''"))
-		}
-	case time.Time:
-		return fmt.Sprintf("'%v'", val.Format("2006-01-02 15:04:05"))
-	case *int, *int8, *int16, *int32, *int64,
-		*uint, *uint8, *uint16, *uint32, *uint64,
-		*float32, *float64:
-		if val != nil {
-			return fmt.Sprint(val)
-		}
-	case *string:
-		if val != nil && *val != "" {
-			return fmt.Sprintf("'%v'", strings.ReplaceAll(*val, "'", "''"))
-		}
-	case *time.Time:
-		if val != nil {
-			return fmt.Sprintf("'%v'", val.Format("2006-01-02 15:04:05"))
-		}
-	default:
-		panic("unknown val type")
-	}
-	return ""
-}
-
 func (q *QInsert) Add(col string, val any) *QInsert {
 	v := normalize(val)
 	if v != "" {
@@ -152,13 +170,19 @@ func (q *QInsert) Addf(col string, format string, a ...any) *QInsert {
 	return q
 }
 
-// add fmt normalize
-func (q *QInsert) Addfn(col string, format string, a ...any) *QInsert {
+// add normalize fmt
+func (q *QInsert) Addn(col string, format string, a ...any) *QInsert {
 	var args []any
 	for _, a := range a {
 		args = append(args, normalize(a))
 	}
 	return q.Addf(col, format, args...)
+}
+
+// add raw
+func (q *QInsert) Addr(col string, val any) *QInsert {
+	q.write(col, fmt.Sprint(val))
+	return q
 }
 
 func (q *QInsert) Sql() string {
