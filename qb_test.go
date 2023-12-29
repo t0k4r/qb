@@ -1,36 +1,58 @@
 package qb_test
 
 import (
-	"database/sql"
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/t0k4r/qb"
 )
 
-type ds struct {
-}
-
-func (ds) Scan(*sql.Rows) (qb.Selectable, error) {
-	return nil, nil
-}
-
 func TestSelect(t *testing.T) {
-	q := qb.Select[ds]().
-		Add(" select a.title from animes a ").
-		Addf(" where a.title = '%v' ", "ok").
+	mfun := func(a any) any {
+		switch a := a.(type) {
+		case string:
+			return strings.ReplaceAll(fmt.Sprint(a), "'", "''")
+		default:
+			return a
+		}
+	}
+	_ = mfun
+	q := qb.SelectNil("animes a").
+		Cols("a.title").
+		Wheref("a.title = '%v'", "cowboy").
+		OrderBy("a.title asc").
+		Limit("10").
 		Sql()
 	t.Log(q)
 }
 
 func TestInsert(t *testing.T) {
 	q := qb.Insert("animes").
-		Add("title", "cowboy").
-		Addf("rating", "$1").
-		Addn("lol", "(select id where yyz = %v)", "not'not").
-		Add("aired", time.Now()).
-		Add("description", nil).
+		Set("title", "cowboy").
+		Setf("rating", "$1").
+		Setf("lol", "(select id where yyz = '%v')", "notnot").
+		Set("aired", time.Now()).
+		Set("description", nil).
 		OnConflict(qb.DoNothing).
 		Sql()
 	t.Log(q)
+}
+
+func TestDelete(t *testing.T) {
+	q := qb.Delete("animes").
+		Wheref("title = '%v'", "cowboy").
+		Sql()
+	t.Log(q)
+
+}
+
+func TestUpdate(t *testing.T) {
+	q := qb.Update("animes").
+		Set("title", "cowboy").
+		Wheref("title = '%v'", "cowboy").
+		Sql()
+	t.Log(q)
+
 }
