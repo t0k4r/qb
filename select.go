@@ -155,11 +155,11 @@ func (q *QSelect[T]) Sql() string {
 	query := strings.Builder{}
 	query.WriteString("select")
 	if q.cols.Len() == 0 {
-		q.cols.WriteString(" * ")
+		query.WriteString(" * ")
 	} else {
-		q.cols.WriteString(q.cols.String())
+		query.WriteString(q.cols.String())
 	}
-	query.WriteString(" from ")
+	query.WriteString("from ")
 	query.WriteString(q.from)
 	query.WriteString(q.join.String())
 	query.WriteString(q.where.String())
