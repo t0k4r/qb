@@ -159,6 +159,7 @@ func (q *QSelect[T]) Sql() string {
 	} else {
 		q.cols.WriteString(q.cols.String())
 	}
+	query.WriteString(" from ")
 	query.WriteString(q.from)
 	query.WriteString(q.join.String())
 	query.WriteString(q.where.String())
