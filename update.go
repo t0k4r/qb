@@ -23,28 +23,25 @@ func (q *QUpdate) comma() {
 	}
 }
 
-func (q *QUpdate) Set(col string, val any) *QUpdate {
-	v := normalize(val)
-	if v == "" {
-		v = "NULL"
-	}
+func (q *QUpdate) Set(col string, val string) *QUpdate {
 	q.comma()
 	q.set.WriteString(" ")
 	q.set.WriteString(col)
 	q.set.WriteString("=")
-	q.set.WriteString(v)
+	q.set.WriteString(val)
 	q.set.WriteString(" ")
 	return q
 }
 
+func (q *QUpdate) Setn(col string, val any) *QUpdate {
+	return q.Set(col, normalize(val))
+}
+
 func (q *QUpdate) Setf(col string, format string, a ...any) *QUpdate {
-	q.comma()
-	q.set.WriteString(" ")
-	q.set.WriteString(col)
-	q.set.WriteString("=")
-	q.set.WriteString(fmt.Sprintf(format, a...))
-	q.set.WriteString(" ")
-	return q
+	return q.Set(col, fmt.Sprintf(format, a...))
+}
+func (q *QUpdate) Seta(col string, val string, args ...any) *QUpdate {
+	return q.Set(col, val).Args(args...)
 }
 
 func (q *QUpdate) Where(where string) *QUpdate {
@@ -59,14 +56,10 @@ func (q *QUpdate) Where(where string) *QUpdate {
 }
 
 func (q *QUpdate) Wheref(format string, a ...any) *QUpdate {
-	if q.where.Len() == 0 {
-		q.where.WriteString(" where ")
-	} else {
-		q.where.WriteString(" ")
-	}
-	q.where.WriteString(fmt.Sprintf(format, a...))
-	q.where.WriteString(" ")
-	return q
+	return q.Where(fmt.Sprintf(format, a...))
+}
+func (q *QUpdate) Wherea(where string, args ...any) *QUpdate {
+	return q.Where(where).Args(args...)
 }
 
 func (q *QUpdate) Args(args ...any) *QUpdate {

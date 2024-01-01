@@ -33,8 +33,8 @@ func TestInsert(t *testing.T) {
 		Set("title", "cowboy").
 		Setf("rating", "$1").
 		Setf("lol", "(select id where yyz = '%v')", "notnot").
-		Set("aired", time.Now()).
-		Set("description", nil).
+		Setn("aired", time.Now()).
+		Setn("description", nil).
 		OnConflict(qb.DoNothing).
 		Sql()
 	t.Log(q)

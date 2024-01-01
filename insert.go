@@ -40,22 +40,23 @@ func (q *QInsert) comma() {
 		q.vals.WriteString(", ")
 	}
 }
-
-func (q *QInsert) Set(col string, val any) *QInsert {
-	v := normalize(val)
-	if v != "" {
-		q.comma()
-		q.cols.WriteString(col)
-		q.vals.WriteString(v)
-	}
+func (q *QInsert) Set(col string, val string) *QInsert {
+	q.comma()
+	q.cols.WriteString(col)
+	q.vals.WriteString(val)
 	return q
 }
 
+func (q *QInsert) Setn(col string, val any) *QInsert {
+	return q.Set(col, normalize(val))
+}
+
 func (q *QInsert) Setf(col string, format string, a ...any) *QInsert {
-	q.comma()
-	q.cols.WriteString(col)
-	q.vals.WriteString(fmt.Sprintf(format, a...))
-	return q
+	return q.Set(col, fmt.Sprintf(format, a...))
+}
+
+func (q *QInsert) Seta(col string, val string, args ...any) *QInsert {
+	return q.Set(col, val).Args(args...)
 }
 
 func (q *QInsert) Args(args ...any) *QInsert {

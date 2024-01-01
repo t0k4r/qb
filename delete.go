@@ -28,14 +28,11 @@ func (q *QDelete) Where(where string) *QDelete {
 }
 
 func (q *QDelete) Wheref(format string, a ...any) *QDelete {
-	if q.where.Len() == 0 {
-		q.where.WriteString(" where ")
-	} else {
-		q.where.WriteString(" ")
-	}
-	q.where.WriteString(fmt.Sprintf(format, a...))
-	q.where.WriteString(" ")
-	return q
+	return q.Where(fmt.Sprintf(format, a...))
+}
+
+func (q *QDelete) Wherea(where string, args ...any) *QDelete {
+	return q.Where(where).Args(args...)
 }
 
 func (q *QDelete) Args(args ...any) *QDelete {

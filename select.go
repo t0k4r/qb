@@ -44,11 +44,12 @@ func (q *QSelect[T]) Cols(cols string) *QSelect[T] {
 	return q
 }
 func (q *QSelect[T]) Colsf(format string, a ...any) *QSelect[T] {
-	q.cols.WriteString(" ")
-	q.cols.WriteString(fmt.Sprintf(format, a...))
-	q.cols.WriteString(" ")
-	return q
+	return q.Cols(fmt.Sprintf(format, a...))
 }
+func (q *QSelect[T]) Colsa(cols string, args ...any) *QSelect[T] {
+	return q.Cols(cols).Args(args...)
+}
+
 func (q *QSelect[T]) Join(join string) *QSelect[T] {
 	q.join.WriteString(" join ")
 	q.join.WriteString(join)
@@ -56,10 +57,10 @@ func (q *QSelect[T]) Join(join string) *QSelect[T] {
 	return q
 }
 func (q *QSelect[T]) Joinf(format string, a ...any) *QSelect[T] {
-	q.join.WriteString(" join ")
-	q.join.WriteString(fmt.Sprintf(format, a...))
-	q.join.WriteString(" ")
-	return q
+	return q.Join(fmt.Sprintf(format, a...))
+}
+func (q *QSelect[T]) Joina(join string, args ...any) *QSelect[T] {
+	return q.Join(join).Args(args...)
 }
 func (q *QSelect[T]) LeftJoin(join string) *QSelect[T] {
 	q.join.WriteString(" left join ")
@@ -68,10 +69,10 @@ func (q *QSelect[T]) LeftJoin(join string) *QSelect[T] {
 	return q
 }
 func (q *QSelect[T]) LeftJoinf(format string, a ...any) *QSelect[T] {
-	q.join.WriteString(" left join ")
-	q.join.WriteString(fmt.Sprintf(format, a...))
-	q.join.WriteString(" ")
-	return q
+	return q.LeftJoin(fmt.Sprintf(format, a...))
+}
+func (q *QSelect[T]) LeftJoina(join string, args ...any) *QSelect[T] {
+	return q.LeftJoin(join).Args(args...)
 }
 func (q *QSelect[T]) RightJoin(join string) *QSelect[T] {
 	q.join.WriteString(" right join ")
@@ -80,10 +81,10 @@ func (q *QSelect[T]) RightJoin(join string) *QSelect[T] {
 	return q
 }
 func (q *QSelect[T]) RightJoinf(format string, a ...any) *QSelect[T] {
-	q.join.WriteString(" right join ")
-	q.join.WriteString(fmt.Sprintf(format, a...))
-	q.join.WriteString(" ")
-	return q
+	return q.RightJoin(fmt.Sprintf(format, a...))
+}
+func (q *QSelect[T]) RightJoina(join string, args ...any) *QSelect[T] {
+	return q.RightJoin(join).Args(args...)
 }
 func (q *QSelect[T]) Where(where string) *QSelect[T] {
 	if q.where.Len() == 0 {
@@ -96,14 +97,10 @@ func (q *QSelect[T]) Where(where string) *QSelect[T] {
 	return q
 }
 func (q *QSelect[T]) Wheref(format string, a ...any) *QSelect[T] {
-	if q.where.Len() == 0 {
-		q.where.WriteString(" where ")
-	} else {
-		q.where.WriteString(" ")
-	}
-	q.where.WriteString(fmt.Sprintf(format, a...))
-	q.where.WriteString(" ")
-	return q
+	return q.Where(fmt.Sprintf(format, a...))
+}
+func (q *QSelect[T]) Wherea(where string, args ...any) *QSelect[T] {
+	return q.Where(where).Args(args...)
 }
 func (q *QSelect[T]) OrderBy(oredr string) *QSelect[T] {
 	if q.order.Len() == 0 {
@@ -116,14 +113,10 @@ func (q *QSelect[T]) OrderBy(oredr string) *QSelect[T] {
 	return q
 }
 func (q *QSelect[T]) OrderByf(format string, a ...any) *QSelect[T] {
-	if q.order.Len() == 0 {
-		q.order.WriteString(" order by ")
-	} else {
-		q.order.WriteString(" ")
-	}
-	q.order.WriteString(fmt.Sprintf(format, a...))
-	q.order.WriteString(" ")
-	return q
+	return q.OrderBy(fmt.Sprintf(format, a...))
+}
+func (q *QSelect[T]) OrderBya(order string, args ...any) *QSelect[T] {
+	return q.OrderBy(order).Args(args...)
 }
 func (q *QSelect[T]) Limit(limit string) *QSelect[T] {
 	if q.limit.Len() == 0 {
@@ -136,16 +129,11 @@ func (q *QSelect[T]) Limit(limit string) *QSelect[T] {
 	return q
 }
 func (q *QSelect[T]) Limitf(format string, a ...any) *QSelect[T] {
-	if q.limit.Len() == 0 {
-		q.limit.WriteString(" limit ")
-	} else {
-		q.limit.WriteString(" ")
-	}
-	q.limit.WriteString(fmt.Sprintf(format, a...))
-	q.limit.WriteString(" ")
-	return q
+	return q.Limit(fmt.Sprintf(format, a...))
 }
-
+func (q *QSelect[T]) Limita(limit string, args ...any) *QSelect[T] {
+	return q.Limit(limit).Args(args...)
+}
 func (q *QSelect[T]) Args(args ...any) *QSelect[T] {
 	q.args = append(q.args, args...)
 	return q
